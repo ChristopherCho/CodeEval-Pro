@@ -35,7 +35,7 @@ def get_model_result(model_path):
     result_table = [["Task", "Score (pass@1)", "Time taken (s)"]]
     
     tasks = os.listdir(model_path)
-    for task in tasks:
+    for task in sorted(tasks):
         task_path = os.path.join(model_path, task)
         result_str, time_taken = get_task_result(task_path)
         result_table.append([task, result_str, time_taken])
