@@ -1,7 +1,8 @@
-while getopts "m:n:" opt; do
+while getopts "m:n:o:" opt; do
     case $opt in
         m) MODEL_PATH=$OPTARG;;
         n) MODEL_NAME=$OPTARG;;
+        o) OUTPUT_DIR=$OPTARG;;
     esac
 done
 
@@ -15,14 +16,18 @@ if [ -z "$MODEL_NAME" ]; then
     echo "MODEL_NAME is not provided. Set to $MODEL_NAME"
 fi
 
+if [ -z "$OUTPUT_DIR" ]; then
+    OUTPUT_DIR=result/${MODEL_NAME}
+    echo "OUTPUT_DIR is not provided. Set to $OUTPUT_DIR"
+fi
+
 export VLLM_WORKER_MULTIPROC_METHOD=spawn
 
 set -e
-OUTPUT_DIR=result
 
 inference() {
     local TASK_TYPE=$1
-    local output_file_path=${OUTPUT_DIR}/${MODEL_NAME}/${TASK_TYPE}/outputs/results.jsonl
+    local output_file_path=${OUTPUT_DIR}/${TASK_TYPE}/outputs/results.jsonl
     if [ -f $output_file_path ]; then
         echo "Output file already exists. Skipping inference." >&2
         echo "X"
@@ -49,7 +54,7 @@ inference() {
 
 sanitize() {
     local TASK_TYPE=$1
-    local output_file_path=${OUTPUT_DIR}/${MODEL_NAME}/${TASK_TYPE}/outputs/santized_results.jsonl
+    local output_file_path=${OUTPUT_DIR}/${TASK_TYPE}/outputs/santized_results.jsonl
     if [ -f $output_file_path ]; then
         echo "Output file already exists. Skipping sanitize." >&2
         echo "X"
@@ -59,7 +64,7 @@ sanitize() {
     (
         python -m eval.santize \
             --model_name $MODEL_NAME \
-            --source_path ${OUTPUT_DIR}/${MODEL_NAME}/${TASK_TYPE}/outputs/
+            --source_path ${OUTPUT_DIR}/${TASK_TYPE}/outputs/
     ) >/dev/null 2>&1
     
     echo "O"
@@ -67,7 +72,7 @@ sanitize() {
 
 harness() {
     local TASK_TYPE=$1
-    local output_file_path=${OUTPUT_DIR}/${MODEL_NAME}/${TASK_TYPE}/result_of_pass_k.json
+    local output_file_path=${OUTPUT_DIR}/${TASK_TYPE}/result_of_pass_k.json
     if [ -f $output_file_path ]; then
         echo "Output file already exists. Skipping harness." >&2
         echo "X"
@@ -111,8 +116,8 @@ harness() {
             --model_name $MODEL_NAME \
             --task $TASK_TYPE \
             --dataset_path $dataset_path \
-            --source_path ${OUTPUT_DIR}/${MODEL_NAME}/${TASK_TYPE}/outputs/ \
-            --save_path ${OUTPUT_DIR}/${MODEL_NAME}/${TASK_TYPE} \
+            --source_path ${OUTPUT_DIR}/${TASK_TYPE}/outputs/ \
+            --save_path ${OUTPUT_DIR}/${TASK_TYPE} \
             --run_code
     ) >/dev/null 2>&1
 
@@ -129,7 +134,7 @@ tasks=(
 )
 
 for task in "${tasks[@]}"; do
-    mkdir -p ${OUTPUT_DIR}/${MODEL_NAME}/${task}/outputs/
+    mkdir -p ${OUTPUT_DIR}/${task}/outputs/
 
     echo "Evaluating $task"
     SECONDS=0
@@ -141,5 +146,5 @@ for task in "${tasks[@]}"; do
     duration=$SECONDS
 
     status_line="[$(date)] Time taken: $duration seconds; Inference: $inference_status; Sanitize: $sanitize_status; Harness: $harness_status"
-    echo $status_line >> ${OUTPUT_DIR}/${MODEL_NAME}/${task}/time_taken.txt
+    echo $status_line >> ${OUTPUT_DIR}/${task}/time_taken.txt
 done
