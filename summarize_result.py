@@ -14,14 +14,13 @@ def get_task_result(task_path):
     pass_k_of_output = result["results"]["pass_k_of_output"]["pass@1"]
     pass_k_of_output_santized = result["results"]["pass_k_of_output_santized"]["pass@1"]
     
-    result_str = f"{pass_k_of_output*100:.2f}"
+    result_str = f"{pass_k_of_output*100:.1f}"
     if pass_k_of_output != pass_k_of_output_santized:
-        result_str += f" (santized: {pass_k_of_output_santized*100:.2f})"
+        result_str += f"/{pass_k_of_output_santized*100:.1f})"
 
     time_file_path = os.path.join(task_path, "time_taken.txt")
     with open(time_file_path, "r") as f:
         time_taken = f.read()
-        ### [Tue Apr 1 07:33:17 UTC 2025] Time taken: 284 seconds; Inference: O; Sanitize: O; Harness: O
 
     time_taken = re.search(r"Time taken: (\d+) seconds", time_taken).group(1)
     
@@ -30,25 +29,37 @@ def get_task_result(task_path):
 
 def get_model_result(model_path):
     model_name = os.path.basename(model_path)
-    print(f"# {model_name}")
+    tasks = [
+        "humaneval_pro",
+        "humaneval_pro_1shot",
+        "humaneval_pro_cot",
+        "mbpp_pro",
+        "mbpp_pro_1shot",
+        "mbpp_pro_cot",
+    ]
 
-    result_table = [["Task", "Score (pass@1)", "Time taken (s)"]]
-    
-    tasks = os.listdir(model_path)
+    model_result = [model_name]
     for task in sorted(tasks):
         task_path = os.path.join(model_path, task)
         result_str, time_taken = get_task_result(task_path)
-        result_table.append([task, result_str, time_taken])
+        model_result.append(f"{result_str} ({time_taken}s)")
     
-    print(tabulate(result_table, headers="firstrow", tablefmt="github"))
-    print()
+    return model_result
 
 
 def main(args):
+    table = [
+        ["Score: Pass@1 (Time taken)", "HumanEval-Pro", "", "", "MBPP-Pro", "", ""],
+        ["Model", "0-shot", "1-shot", "CoT", "0-shot", "1-shot", "CoT"],
+    ]
+    
     models = os.listdir(args.result_dir)
     for model in models:
         model_path = os.path.join(args.result_dir, model)
-        get_model_result(model_path)
+        model_result = get_model_result(model_path)
+        table.append(model_result)
+    
+    print(tabulate(table, headers="firstrow", tablefmt="github"))
 
 
 if __name__ == "__main__":
