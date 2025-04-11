@@ -23,6 +23,7 @@ if [ -z "$OUTPUT_DIR" ]; then
 fi
 
 if [ -z "$TASK" ]; then
+    echo "TASK is not provided. Set to all"
     TASKS=(
         humaneval_pro
         humaneval_pro_cot
