@@ -1,8 +1,9 @@
-while getopts "m:n:o:" opt; do
+while getopts "m:n:o:t:" opt; do
     case $opt in
         m) MODEL_PATH=$OPTARG;;
         n) MODEL_NAME=$OPTARG;;
         o) OUTPUT_DIR=$OPTARG;;
+        t) TASK=$OPTARG;;
     esac
 done
 
@@ -19,6 +20,19 @@ fi
 if [ -z "$OUTPUT_DIR" ]; then
     OUTPUT_DIR=result/${MODEL_NAME}
     echo "OUTPUT_DIR is not provided. Set to $OUTPUT_DIR"
+fi
+
+if [ -z "$TASK" ]; then
+    TASKS=(
+        humaneval_pro
+        humaneval_pro_cot
+        humaneval_pro_1shot
+        mbpp_pro
+        mbpp_pro_cot
+        mbpp_pro_1shot
+    )
+else
+    TASKS=($TASK)
 fi
 
 export VLLM_WORKER_MULTIPROC_METHOD=spawn
@@ -79,15 +93,6 @@ harness() {
         return
     fi
 
-    # local run_code_supported_tasks=(
-    #     humaneval_pro
-    #     mbpp_pro
-    # )
-    # local run_code_arg=""
-    # if [[ " ${run_code_supported_tasks[@]} " =~ " ${TASK_TYPE} " ]]; then
-    #     run_code_arg="--run_code"
-    # fi
-
     local humaneval_dataset_path=dataset/humaneval_pro.json
     local humaneval_variations=(
         humaneval_pro
@@ -124,16 +129,7 @@ harness() {
     echo "O"
 }
 
-tasks=(
-    humaneval_pro
-    humaneval_pro_cot
-    humaneval_pro_1shot
-    mbpp_pro
-    mbpp_pro_cot
-    mbpp_pro_1shot
-)
-
-for task in "${tasks[@]}"; do
+for task in "${TASKS[@]}"; do
     mkdir -p ${OUTPUT_DIR}/${task}/outputs/
 
     echo "Evaluating $task"
